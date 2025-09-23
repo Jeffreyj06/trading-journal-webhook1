@@ -1,7 +1,7 @@
 {
   "name": "trading-journal-webhook1",
   "version": "1.0.0",
-  "description": "TradingView webhook-integrated trading journal with automated signal processing",
+  "description": "TradingView webhook-integrated trading journal with automated signal processing and SMS alerts",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
@@ -12,7 +12,8 @@
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",
     "pg": "^8.11.3",
-    "body-parser": "^1.20.2"
+    "body-parser": "^1.20.2",
+    "twilio": "^4.19.0"
   },
   "engines": {
     "node": "22.x"
@@ -23,7 +24,9 @@
     "tradingview",
     "webhook",
     "forex",
-    "signals"
+    "signals",
+    "sms",
+    "notifications"
   ],
   "author": "TradingTeam",
   "license": "MIT"
