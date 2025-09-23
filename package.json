@@ -1,0 +1,30 @@
+{
+  "name": "trading-journal-webhook1",
+  "version": "1.0.0",
+  "description": "TradingView webhook-integrated trading journal with automated signal processing",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "pg": "^8.11.3",
+    "body-parser": "^1.20.2"
+  },
+  "engines": {
+    "node": "18.x"
+  },
+  "keywords": [
+    "trading",
+    "journal",
+    "tradingview",
+    "webhook",
+    "forex",
+    "signals"
+  ],
+  "author": "TradingTeam",
+  "license": "MIT"
+}
