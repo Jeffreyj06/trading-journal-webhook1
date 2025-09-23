@@ -8,10 +8,12 @@ require('dotenv').config();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// PostgreSQL connection
+// PostgreSQL connection with proper Neon configuration
 const pool = new Pool({
-    connectionString: process.env.DATABASE_URL,
-    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+    connectionString: process.env.DATABASE_URL || process.env.POSTGRES_URL,
+    ssl: {
+        rejectUnauthorized: false
+    }
 });
 
 // Middleware
@@ -64,6 +66,7 @@ async function initializeDatabase() {
     }
 }
 
+// Initialize database on startup
 initializeDatabase();
 
 // Webhook endpoint for TradingView
@@ -282,7 +285,7 @@ process.on('SIGINT', async () => {
 
 app.listen(PORT, () => {
     console.log(`Trading Journal server running on port ${PORT}`);
-    console.log(`Webhook URL: http://localhost:${PORT}/webhook/tradingview`);
-    console.log(`Dashboard: http://localhost:${PORT}`);
+    console.log(`Webhook URL: https://trading-journal-webhook1.vercel.app/webhook/tradingview`);
+    console.log(`Dashboard: https://trading-journal-webhook1.vercel.app`);
     console.log('Database: PostgreSQL connected');
 });
