@@ -64,7 +64,7 @@
     </div>
 
     <div id="entryModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
-        <div class="bg-gray-800 p-6 rounded-lg max-w-md w-full mx-4">
+        <div class="bg-gray-800 p-6 rounded-lg max-w-md w-full mx-4 max-h-screen overflow-y-auto">
             <h3 class="text-lg font-semibold mb-4">Create Trade Entry</h3>
             <form id="entryForm" class="space-y-4">
                 <input type="hidden" id="entrySignalId">
@@ -89,6 +89,12 @@
                     <label class="block text-sm font-medium mb-2">Reasoning</label>
                     <textarea id="entryReasoning" rows="3" 
                               class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2"></textarea>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-2">Analysis Video URL</label>
+                    <input type="url" id="entryVideoUrl" placeholder="https://youtube.com/watch?v=..." 
+                           class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2">
+                    <p class="text-xs text-gray-400 mt-1">Upload your trade analysis to YouTube (unlisted) and paste the link here</p>
                 </div>
                 <div class="flex space-x-2">
                     <button type="button" onclick="closeEntryModal()" 
@@ -188,6 +194,17 @@
         function closeEntryModal() {
             document.getElementById('entryModal').classList.add('hidden');
             document.getElementById('entryModal').classList.remove('flex');
+            // Clear form
+            document.getElementById('entryForm').reset();
+        }
+
+        function getYouTubeEmbedUrl(url) {
+            const regex = /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)/;
+            const match = url.match(regex);
+            if (match) {
+                return `https://www.youtube.com/embed/${match[1]}`;
+            }
+            return null;
         }
 
         document.getElementById('entryForm').addEventListener('submit', async function(e) {
@@ -199,6 +216,7 @@
                 direction: document.getElementById('entryDirection').value,
                 entry_price: document.getElementById('entryEntryPrice').value,
                 reasoning: document.getElementById('entryReasoning').value,
+                video_url: document.getElementById('entryVideoUrl').value,
                 created_by: document.getElementById('userName').value || 'Anonymous'
             };
 
@@ -268,22 +286,39 @@
                     return;
                 }
 
-                tradesList.innerHTML = trades.map(trade => `
-                    <div class="bg-gray-800 p-4 rounded-lg mb-4">
-                        <div class="flex justify-between items-start">
-                            <div>
-                                <div class="flex items-center space-x-2">
-                                    <span class="text-lg font-semibold">${trade.pair}</span>
-                                    <span class="px-2 py-1 rounded text-sm ${trade.direction === 'long' ? 'bg-green-600' : 'bg-red-600'}">
-                                        ${trade.direction.toUpperCase()}
-                                    </span>
+                tradesList.innerHTML = trades.map(trade => {
+                    const embedUrl = trade.video_url ? getYouTubeEmbedUrl(trade.video_url) : null;
+                    
+                    return `
+                        <div class="bg-gray-800 p-4 rounded-lg mb-4">
+                            <div class="flex justify-between items-start">
+                                <div class="flex-1">
+                                    <div class="flex items-center space-x-2">
+                                        <span class="text-lg font-semibold">${trade.pair}</span>
+                                        <span class="px-2 py-1 rounded text-sm ${trade.direction === 'long' ? 'bg-green-600' : 'bg-red-600'}">
+                                            ${trade.direction.toUpperCase()}
+                                        </span>
+                                    </div>
+                                    <div class="text-gray-400 text-sm mt-1">Entry: ${trade.entry_price} | By: ${trade.created_by}</div>
+                                    ${trade.reasoning ? `<div class="text-gray-300 text-sm mt-2">${trade.reasoning}</div>` : ''}
+                                    ${embedUrl ? `
+                                        <div class="mt-4">
+                                            <h4 class="text-sm font-medium text-gray-300 mb-2">Trade Analysis Video:</h4>
+                                            <iframe 
+                                                width="100%" 
+                                                height="200" 
+                                                src="${embedUrl}" 
+                                                frameborder="0" 
+                                                allowfullscreen
+                                                class="rounded">
+                                            </iframe>
+                                        </div>
+                                    ` : ''}
                                 </div>
-                                <div class="text-gray-400 text-sm mt-1">Entry: ${trade.entry_price} | By: ${trade.created_by}</div>
-                                ${trade.reasoning ? `<div class="text-gray-300 text-sm mt-2">${trade.reasoning}</div>` : ''}
                             </div>
                         </div>
-                    </div>
-                `).join('');
+                    `;
+                }).join('');
             } catch (error) {
                 console.error('Error loading trades:', error);
             }
