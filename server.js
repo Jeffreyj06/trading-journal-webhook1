@@ -3,10 +3,23 @@ const cors = require('cors');
 const crypto = require('crypto');
 const path = require('path');
 const { Pool } = require('pg');
+const twilio = require('twilio');
 require('dotenv').config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+
+// Twilio configuration
+const twilioClient = twilio(
+    process.env.TWILIO_ACCOUNT_SID || 'ACe09d66a5ce53ad9b1cee5e986a099266',
+    process.env.TWILIO_AUTH_TOKEN || 'f546cfeaea907e360b9631869ff780b9'
+);
+
+const TWILIO_PHONE = process.env.TWILIO_PHONE || '+18447837884';
+const ALERT_PHONES = [
+    process.env.PHONE1 || '+19042331548',
+    process.env.PHONE2 || '+19044500665'
+];
 
 // PostgreSQL connection with proper Neon configuration
 const pool = new Pool({
@@ -20,6 +33,24 @@ const pool = new Pool({
 app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
+
+// Send SMS notifications
+async function sendTradeAlert(signal) {
+    const message = `🚨 NEW SIGNAL: ${signal.ticker} ${signal.action.toUpperCase()} at ${signal.price}\nAnalyze: https://trading-journal-webhook1.vercel.app\nReceived: ${new Date().toLocaleTimeString()}`;
+    
+    for (const phone of ALERT_PHONES) {
+        try {
+            await twilioClient.messages.create({
+                body: message,
+                from: TWILIO_PHONE,
+                to: phone
+            });
+            console.log(`SMS sent to ${phone}`);
+        } catch (error) {
+            console.error(`SMS failed to ${phone}:`, error);
+        }
+    }
+}
 
 // Initialize database tables
 async function initializeDatabase() {
@@ -52,6 +83,7 @@ async function initializeDatabase() {
                 reasoning TEXT,
                 voice_note_url TEXT,
                 screenshot_url TEXT,
+                video_url TEXT,
                 result VARCHAR(20) DEFAULT 'pending',
                 pips DECIMAL(8,2) DEFAULT 0,
                 created_by VARCHAR(100) NOT NULL,
@@ -94,6 +126,9 @@ app.post('/webhook/tradingview', async (req, res) => {
         
         const signal = result.rows[0];
         console.log('Signal processed:', signal);
+        
+        // Send SMS alerts immediately after storing signal
+        await sendTradeAlert(signal);
         
         res.status(200).json({ 
             success: true, 
@@ -160,9 +195,9 @@ app.post('/api/trades', async (req, res) => {
             INSERT INTO trades (
                 signal_id, pair, direction, entry_price, exit_price, 
                 stop_loss, take_profit, reasoning, voice_note_url, 
-                screenshot_url, result, pips, created_by
+                screenshot_url, video_url, result, pips, created_by
             )
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
             RETURNING *
         `, [
             req.body.signal_id || null,
@@ -175,6 +210,7 @@ app.post('/api/trades', async (req, res) => {
             req.body.reasoning || '',
             req.body.voice_note_url || null,
             req.body.screenshot_url || null,
+            req.body.video_url || null,
             req.body.result || 'pending',
             parseFloat(req.body.pips) || 0,
             req.body.created_by || 'Anonymous'
@@ -267,9 +303,14 @@ app.post('/test-webhook', async (req, res) => {
             RETURNING *
         `, [testSignal.ticker, testSignal.action, testSignal.price, new Date(testSignal.timestamp)]);
         
+        const signal = result.rows[0];
+        
+        // Send SMS for test signals too
+        await sendTradeAlert(signal);
+        
         res.json({ 
-            message: 'Test signal created', 
-            signal: result.rows[0] 
+            message: 'Test signal created and SMS sent', 
+            signal: signal
         });
     } catch (error) {
         console.error('Test webhook error:', error);
@@ -288,4 +329,5 @@ app.listen(PORT, () => {
     console.log(`Webhook URL: https://trading-journal-webhook1.vercel.app/webhook/tradingview`);
     console.log(`Dashboard: https://trading-journal-webhook1.vercel.app`);
     console.log('Database: PostgreSQL connected');
+    console.log('SMS alerts configured for phones:', ALERT_PHONES);
 });
